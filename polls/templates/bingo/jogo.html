@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Bingo</title>
+</head>
+<body>
+    <h1>Jogo de Bingo</h1>
+    <h2>Números Sorteados:</h2>
+    <ul>
+        {% for numero in numeros_sorteado %}
+            <li>{{ numero }}</li>
+        {% endfor %}
+    </ul>
+    <h2>Cartelas:</h2>
+    <ul>
+        {% for cartela in cartelas %}
+            <li>{{ cartela }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

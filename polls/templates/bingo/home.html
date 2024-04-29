@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Bingo - Página Inicial</title>
+</head>
+<body>
+    <h1>Bem-vindo ao Jogo de Bingo!</h1>
+    <form action="{% url 'bingo_cards' %}" method="post">
+        {% csrf_token %}
+        <label for="quantidade_cartelas">Escolha a quantidade de cartelas:</label>
+        <input type="number" id="quantidade_cartelas" name="quantidade_cartelas" min="1" max="10" value="1">
+        <button type="submit">Gerar Cartelas</button>
+    </form>
+</body>
+</html>
