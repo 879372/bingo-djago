@@ -1,6 +1,7 @@
 # bingo/utils/bingo_utils.py
 
 import random
+import time
 
 def gerar_cartela():
     cartela = []
@@ -10,8 +11,14 @@ def gerar_cartela():
     return cartela
 
 
-def sortear_numero():
-    return random.list(1, 75)
+def sortear_numeros():
+    numeros_disponiveis = list(range(1, 76))
+    numeros_sorteados = []
+    while numeros_disponiveis:
+        numero_sorteado = random.choice(numeros_disponiveis)
+        numeros_sorteados.append(numero_sorteado)
+        numeros_disponiveis.remove(numero_sorteado)
+    return numeros_sorteados, numeros_disponiveis
 
 
 def verificar_numero(cartela, numero_sorteado):
