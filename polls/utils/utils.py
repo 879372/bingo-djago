@@ -4,10 +4,10 @@ import random
 import time
 
 def gerar_cartela():
-    cartela = []
-    for letra in ['B', 'I', 'N', 'G', 'O']:
-        numeros = random.sample(range(1 + (15 * 'BINGO'.index(letra)), 16 + (15 * 'BINGO'.index(letra))), 3)
-        cartela.extend(numeros) 
+    cartela = {'col1': [], 'col2': [], 'col3': []}
+    cartela['col1'] = sorted(random.sample(range(1, 30), 5))
+    cartela['col2'] = sorted(random.sample(range(31, 60), 5))
+    cartela['col3'] = sorted(random.sample(range(61, 90), 5))
     return cartela
 
 

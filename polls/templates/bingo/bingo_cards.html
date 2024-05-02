@@ -14,13 +14,16 @@
             padding: 5px;
             text-align: center;
         }
+        .destaque {
+            background-color: yellow; /* Defina aqui o estilo de destaque desejado */
+        }
     </style>
 </head>
 <body>
     <h1>Cartelas de Bingo</h1>
     {% for cartela in cartelas %}
         <h2>Cartela {{ cartela.pk }}</h2>
-        <table>
+        <table class="numeros-cartela"> <!-- Adiciona a classe numeros-cartela à tabela -->
             <tr>
                 <th>B</th><th>I</th><th>N</th><th>G</th><th>O</th>
             </tr>
@@ -29,6 +32,7 @@
                     {% if forloop.counter0|divisibleby:5 and not forloop.first %}
                         </tr><tr>
                     {% endif %}
+                    <!-- Adicione a verificação e a classe de destaque aqui -->
                     <td>{{ numero }}</td>
                 {% endfor %}
             </tr>
@@ -36,80 +40,51 @@
     {% endfor %}
     <h2 id="numeros-sorteados">Números Sorteados</h2>
     <ul id="lista-numeros-sorteados"></ul>
-    
+
     <script>
-        function criarNumerosDisponiveis() {
-            var numeros_disponiveis = [];
-            for (var i = 1; i <= 75; i++) {
-                numeros_disponiveis.push(i);
-            }
-            return numeros_disponiveis;
+        // Função para verificar cada número da lista de sorteio em intervalos de 1 segundo
+        function verificarNumerosSorteados(numerosSorteados) {
+            var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
+            var intervalo = 1000; // Intervalo de 1 segundo
+
+            var i = 0;
+            var interval = setInterval(function() {
+                if (i >= numerosSorteados.length) {
+                    clearInterval(interval); // Interrompe o intervalo quando todos os números foram verificados
+                    return;
+                }
+
+                var numeroAtual = numerosSorteados[i];
+                for (var j = 0; j < numerosCartelas.length; j++) {
+                    var numeroCartela = parseInt(numerosCartelas[j].innerText);
+                    if (numeroCartela === numeroAtual) {
+                        numerosCartelas[j].classList.add('destaque'); // Destaca o número na cartela se encontrado
+                    }
+                }
+
+                i++;
+            }, intervalo);
         }
-
-        function sortearNumeros() {
-            var numeros_disponiveis = criarNumerosDisponiveis();
-            var numeros_sorteados = [];
-
-            while (numeros_disponiveis.length > 0) {
-                var index = Math.floor(Math.random() * numeros_disponiveis.length);
-                var numero_sorteado = numeros_disponiveis.splice(index, 1)[0];
-                numeros_sorteados.push(numero_sorteado);
-            }
-            return numeros_sorteados;
-        }
-
+        // Função para atualizar a exibição dos números a cada segundo
         function atualizarNumeros(numeros) {
             var ul = document.getElementById('lista-numeros-sorteados');
-            ul.innerHTML = ''; 
-        
+            ul.innerHTML = ''; // Limpa a lista antes de adicionar os novos números
+
+            // Adiciona cada número à lista
             numeros.forEach(function(numero, index) {
                 setTimeout(function() {
                     var li = document.createElement('li');
                     li.textContent = numero;
                     ul.appendChild(li);
-                    
-                    // Enviar o número sorteado para o Django via AJAX
-                    enviarNumeroSorteado(numero);
-                }, index * 1000);
+
+                    // Após adicionar o número à lista, verifica se ele está presente nas cartelas
+                    verificarNumerosSorteados([numero]);
+                }, index * 1000); // Atraso de 1 segundo para cada número
             });
         }
-        
-        function enviarNumeroSorteado(numero) {
-            var formData = new FormData();
-            formData.append('numeros_sorteados[]', numero);  // Certifique-se de que o nome do parâmetro corresponda ao usado na view
-        
-            fetch('/salvar_numeros_sorteados/', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao salvar número sorteado');
-                }
-            })
-            .catch(error => console.error(error));
-        }
-        
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        
-        var numeros_sorteados = sortearNumeros();
-        atualizarNumeros(numeros_sorteados);
+
+        // Chama a função para atualizar a exibição dos números ao carregar a página
+        atualizarNumeros({{ numeros_sorteados|safe }});
     </script>
 </body>
 </html>
