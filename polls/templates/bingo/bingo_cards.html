@@ -42,49 +42,80 @@
     <ul id="lista-numeros-sorteados"></ul>
 
     <script>
-        // Função para verificar cada número da lista de sorteio em intervalos de 1 segundo
-        function verificarNumerosSorteados(numerosSorteados) {
+        function enviarNumeroSorteado(numerosSorteados) {
+            var formData = new FormData();
+            formData.append('numeros_sorteados[]', numerosSorteados);  // Certifique-se de que o nome do parâmetro corresponda ao usado na view
+        
+            fetch('/salvar_numeros_sorteados/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao salvar número sorteado');
+                }
+            })
+            .catch(error => console.error(error));
+        }
+        
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    
+        function verificarNumerosSorteados(numerosSorteados, csrftoken) {
             var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
             var intervalo = 1000; // Intervalo de 1 segundo
-
+    
             var i = 0;
-            var interval = setInterval(function() {
+            var interval = setInterval(function () {
                 if (i >= numerosSorteados.length) {
                     clearInterval(interval); // Interrompe o intervalo quando todos os números foram verificados
                     return;
                 }
-
+    
                 var numeroAtual = numerosSorteados[i];
                 for (var j = 0; j < numerosCartelas.length; j++) {
                     var numeroCartela = parseInt(numerosCartelas[j].innerText);
                     if (numeroCartela === numeroAtual) {
-                        numerosCartelas[j].classList.add('destaque'); // Destaca o número na cartela se encontrado
+                        numerosCartelas[j].classList.add('destaque');
                     }
                 }
-
+                enviarNumeroSorteado(numeroAtual);
                 i++;
             }, intervalo);
         }
-        // Função para atualizar a exibição dos números a cada segundo
-        function atualizarNumeros(numeros) {
+    
+        function atualizarNumeros(numeros, csrftoken) {
             var ul = document.getElementById('lista-numeros-sorteados');
             ul.innerHTML = ''; // Limpa a lista antes de adicionar os novos números
-
-            // Adiciona cada número à lista
-            numeros.forEach(function(numero, index) {
-                setTimeout(function() {
+    
+            numeros.forEach(function (numero, index) {
+                setTimeout(function () {
                     var li = document.createElement('li');
                     li.textContent = numero;
                     ul.appendChild(li);
-
-                    // Após adicionar o número à lista, verifica se ele está presente nas cartelas
-                    verificarNumerosSorteados([numero]);
-                }, index * 1000); // Atraso de 1 segundo para cada número
+                    verificarNumerosSorteados([numero], csrftoken);
+                }, index * 1000);
             });
         }
-
-        // Chama a função para atualizar a exibição dos números ao carregar a página
-        atualizarNumeros({{ numeros_sorteados|safe }});
+    
+        var csrftoken = getCookie('csrftoken');
+        atualizarNumeros({{ numeros_sorteados|safe }}, csrftoken);
     </script>
+
 </body>
 </html>

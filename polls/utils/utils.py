@@ -4,15 +4,15 @@ import random
 import time
 
 def gerar_cartela():
-    cartela = {'col1': [], 'col2': [], 'col3': []}
-    cartela['col1'] = sorted(random.sample(range(1, 30), 5))
-    cartela['col2'] = sorted(random.sample(range(31, 60), 5))
-    cartela['col3'] = sorted(random.sample(range(61, 90), 5))
+    cartela = {'lin1': [], 'lin2': [], 'lin3': []}
+    cartela['lin1'] = sorted(random.sample(range(1, 30), 5))
+    cartela['lin2'] = sorted(random.sample(range(31, 60), 5))
+    cartela['lin3'] = sorted(random.sample(range(61, 90), 5))
     return cartela
 
 
 def sortear_numeros():
-    numeros_disponiveis = list(range(1, 76))
+    numeros_disponiveis = list(range(1, 91))
     numeros_sorteados = []
     while numeros_disponiveis:
         numero_sorteado = random.choice(numeros_disponiveis)

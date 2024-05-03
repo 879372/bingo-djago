@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.shortcuts import HttpResponse
+from django.http import HttpResponse
 from django.views import View
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout
@@ -10,6 +11,8 @@ import json
 from django.http import JsonResponse
 from django.db.models import Count
 import re
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 class HomeView(View):
@@ -23,21 +26,6 @@ class JogoView(View):
         numeros_sorteado = NumeroSorteado.objects.filter(jogo=jogo)
         return render(request, 'bingo/jogo.html', {'jogo': jogo, 'cartelas': cartelas, 'numeros_sorteado': numeros_sorteado})
 
-
-
-# def salvar_numeros_sorteados(request):
-#     if request.method == 'POST':
-#         # Obtenha os números sorteados do corpo da solicitação POST
-#         numeros_sorteados = request.POST.getlist('numeros_sorteados[]')
-
-#         # Crie uma nova instância de NumeroSorteado para cada sorteio
-#         sorteio = NumeroSorteado.objects.create(numeros=numeros_sorteados)
-
-#         # Retorne uma resposta com o ID do novo sorteio criado e uma mensagem de sucesso
-#         return JsonResponse({'sorteio_id': sorteio.pk, 'mensagem': 'Números sorteados salvos com sucesso!'}, status=200)
-#     else:
-#         # Retorne uma resposta de erro se a solicitação não for do tipo POST
-#         return JsonResponse({'mensagem': 'Método não permitido'}, status=405)
 
 @login_required
 def bingo_cards(request):
@@ -57,22 +45,59 @@ def bingo_cards(request):
             nova_cartela = Cartela.objects.create(jogador=jogador, numeros_gerados=numeros_gerados_str, id_sorteio=sorteio)
             cartelas.append(nova_cartela)
 
-        # Verificar se alguma cartela está completa
-        for cartela in cartelas:
-            numeros_na_cartela = set(map(int, re.findall(r'\d+', cartela.numeros_gerados)))
-            if numeros_na_cartela.issubset(numeros_sorteados):
-                cartela_completa = cartela
-                break
 
         for cartela in cartelas:
+            cartela_json = cartela.numeros_gerados
+            cartela_dict = json.loads(cartela_json)
+            lista_col1 = cartela_dict['lin1']
+            lista_col2 = cartela_dict['lin2']
+            lista_col3 = cartela_dict['lin3']
+            todas_listas = [lista_col1, lista_col2, lista_col3]
+            numeros_sem_travessoes = []
+            for lista in todas_listas:
+                numeros_sem_travessoes.extend([numero for numero in lista if isinstance(numero, int)])
+            cartela.numeros_gerados = numeros_sem_travessoes
             cartela.numeros_gerados = str(cartela.numeros_gerados)[1:-1]
             cartela.numeros_gerados = cartela.numeros_gerados.split(',')
+            #print(cartela.numeros_gerados)
 
-        return render(request, 'bingo/bingo_cards.html', {'cartelas': cartelas, 'cartela_completa': cartela_completa, 'numeros_sorteados': json.dumps(numeros_sorteados)})
+        return render(request, 'bingo/bingo_cards.html', {'cartelas': cartelas, 'cartela_completa': cartela_completa, 'numeros_sorteados': numeros_sorteados})
     else:
         return render(request, 'bingo/home.html')
 
 
+
+def salvar_numeros_sorteados(request):
+    if request.method == 'POST':
+        # Obtenha os números sorteados do corpo da solicitação POST
+        numeros_sorteados = request.POST.getlist('numeros_sorteados[]')
+        #print(numeros_sorteados)
+        # Converter os números sorteados para inteiros
+        numeros_sorteados = [int(numero) for numero in numeros_sorteados]
+        
+        # Obter o último sorteio
+        sorteio = NumeroSorteado.objects.latest('id')
+        #print(sorteio)
+        # Use o ID do último sorteio para filtrar as cartelas associadas a esse sorteio
+        cartelas_do_sorteio = Cartela.objects.filter(id_sorteio_id=sorteio.id)
+        #print(cartelas_do_sorteio)
+        # Iterar sobre as cartelas encontradas
+        for cartela in cartelas_do_sorteio:
+            # Acessar os números gerados da cartela
+            numeros_gerados = cartela.numeros_gerados
+            #print(numeros_gerados)
+            numeros_gerados_dict = json.loads(numeros_gerados)
+            # Extrair todos os números gerados em uma única lista
+            todos_numeros_gerados = [numero for numeros_linha in numeros_gerados_dict.values() for numero in numeros_linha]
+            print(numeros_sorteados)
+            # Verificar se todos os números gerados estão presentes nos números sorteados
+            ver = set(todos_numeros_gerados).issubset(set(numeros_sorteados))
+            print(ver)
+                # print('bateuuuu')
+        # Se nenhum jogador tiver todos os números da cartela sorteados, retornar uma mensagem
+        return JsonResponse({'message': 'Nenhum jogador teve todos os números da cartela sorteados.'})
+    else:
+        return HttpResponse('Método não permitido', status=405)
 
 
 
@@ -93,6 +118,7 @@ def signup_view(request):
     else:
         form = UserCreationForm()
     return render(request, 'registration/signup.html', {'form': form})
+
 
 def login_view(request):
     if request.method == 'POST':
