@@ -71,30 +71,17 @@ def salvar_numeros_sorteados(request):
     if request.method == 'POST':
         # Obtenha os números sorteados do corpo da solicitação POST
         numeros_sorteados = request.POST.getlist('numeros_sorteados[]')
-        #print(numeros_sorteados)
-        # Converter os números sorteados para inteiros
-        numeros_sorteados = [int(numero) for numero in numeros_sorteados]
-        
+        print(numeros_sorteados)
         # Obter o último sorteio
         sorteio = NumeroSorteado.objects.latest('id')
-        #print(sorteio)
+        print(sorteio)
         # Use o ID do último sorteio para filtrar as cartelas associadas a esse sorteio
         cartelas_do_sorteio = Cartela.objects.filter(id_sorteio_id=sorteio.id)
-        #print(cartelas_do_sorteio)
+        print(cartelas_do_sorteio)
         # Iterar sobre as cartelas encontradas
         for cartela in cartelas_do_sorteio:
-            # Acessar os números gerados da cartela
             numeros_gerados = cartela.numeros_gerados
-            #print(numeros_gerados)
-            numeros_gerados_dict = json.loads(numeros_gerados)
-            # Extrair todos os números gerados em uma única lista
-            todos_numeros_gerados = [numero for numeros_linha in numeros_gerados_dict.values() for numero in numeros_linha]
-            print(numeros_sorteados)
-            # Verificar se todos os números gerados estão presentes nos números sorteados
-            ver = set(todos_numeros_gerados).issubset(set(numeros_sorteados))
-            print(ver)
-                # print('bateuuuu')
-        # Se nenhum jogador tiver todos os números da cartela sorteados, retornar uma mensagem
+            print(numeros_gerados)   
         return JsonResponse({'message': 'Nenhum jogador teve todos os números da cartela sorteados.'})
     else:
         return HttpResponse('Método não permitido', status=405)
