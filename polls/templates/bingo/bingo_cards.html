@@ -42,7 +42,7 @@
     <ul id="lista-numeros-sorteados"></ul>
 
     <script>
-        function enviarNumeroSorteado(numerosSorteados) {
+        {% comment %} function enviarNumeroSorteado(numerosSorteados) {
             var formData = new FormData();
             formData.append('numeros_sorteados[]', numerosSorteados);  // Certifique-se de que o nome do parâmetro corresponda ao usado na view
         
@@ -74,9 +74,9 @@
                 }
             }
             return cookieValue;
-        }
+        } {% endcomment %}
     
-        function verificarNumerosSorteados(numerosSorteados, csrftoken) {
+        function verificarNumerosSorteados(numerosSorteados) {
             var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
             var intervalo = 1000; // Intervalo de 1 segundo
     
@@ -94,12 +94,12 @@
                         numerosCartelas[j].classList.add('destaque');
                     }
                 }
-                enviarNumeroSorteado(numeroAtual);
+                //enviarNumeroSorteado(numeroAtual);
                 i++;
             }, intervalo);
         }
-    
-        function atualizarNumeros(numeros, csrftoken) {
+
+        function atualizarNumeros(numeros) {
             var ul = document.getElementById('lista-numeros-sorteados');
             ul.innerHTML = ''; // Limpa a lista antes de adicionar os novos números
     
@@ -108,13 +108,13 @@
                     var li = document.createElement('li');
                     li.textContent = numero;
                     ul.appendChild(li);
-                    verificarNumerosSorteados([numero], csrftoken);
+                    verificarNumerosSorteados([numero]);
                 }, index * 1000);
             });
         }
     
-        var csrftoken = getCookie('csrftoken');
-        atualizarNumeros({{ numeros_sorteados|safe }}, csrftoken);
+        //var csrftoken = getCookie('csrftoken');
+        atualizarNumeros({{ numeros_sorteados }});
     </script>
 
 </body>
