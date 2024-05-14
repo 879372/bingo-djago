@@ -37,11 +37,6 @@ def bingo_cards(request):
         sorteio = NumeroSorteado.objects.create(numeros=numeros_sorteados)
         cartelas = []
 
-        # Variáveis para armazenar informações sobre as cartelas vencedoras
-        primeira_cartela_linhas_completas = None
-        primeira_cartela_linhas_min_numeros = None
-        primeira_cartela_cartela_completa = None
-
         for _ in range(quantidade_cartelas):
             numeros_cartela = gerar_cartela()
             numeros_gerados_str = json.dumps(numeros_cartela)
@@ -57,42 +52,53 @@ def bingo_cards(request):
             todas_listas = [lista_col1, lista_col2, lista_col3]
             numeros_sem_travessoes = []
 
-            linhas_completas = any(all(numero in numeros_sorteados for numero in linha) for linha in todas_listas)
-            linhas_min_numeros = any(sum(numero in numeros_sorteados for numero in linha) >= 4 for linha in todas_listas)
-            cartela_completa = all(numero in numeros_sorteados for linha in todas_listas for numero in linha)
-
             for lista in todas_listas:
                 numeros_sem_travessoes.extend([numero for numero in lista if isinstance(numero, int)])
             cartela.numeros_gerados = numeros_sem_travessoes
             cartela.numeros_gerados = str(cartela.numeros_gerados)[1:-1]
             cartela.numeros_gerados = cartela.numeros_gerados.split(',')
 
-            # Lógica para verificar a primeira cartela a alcançar cada estado vencedor
-            if linhas_completas and primeira_cartela_linhas_completas is None:
-                primeira_cartela_linhas_completas = cartela
-            if linhas_min_numeros and primeira_cartela_linhas_min_numeros is None:
-                primeira_cartela_linhas_min_numeros = cartela
-            if cartela_completa and primeira_cartela_cartela_completa is None:
-                primeira_cartela_cartela_completa = cartela
-            
-            print(todas_listas)
-            print(primeira_cartela_linhas_completas, '1')
-            print(primeira_cartela_linhas_min_numeros, '2')
-            print(primeira_cartela_cartela_completa, '3')
-        return render(request, 'bingo/bingo_cards.html', {'cartelas': cartelas, 'primeira_cartela_linhas_completas': primeira_cartela_linhas_completas, 'primeira_cartela_linhas_min_numeros': primeira_cartela_linhas_min_numeros, 'primeira_cartela_cartela_completa': primeira_cartela_cartela_completa, 'numeros_sorteados': numeros_sorteados})
+        # Verificar o estado das cartelas
+        cartela_kuadra, cartela_kina, cartela_keno = verificar_estado_cartela(cartelas, numeros_sorteados, min_numeros=4)
+        
+        return render(request, 'bingo/bingo_cards.html', {'cartelas': cartelas, 
+                                                           'numeros_sorteados': numeros_sorteados,
+                                                           'cartela_kuadra': cartela_kuadra,
+                                                           'cartela_kina': cartela_kina,
+                                                           'cartela_keno': cartela_keno})
     else:
         return render(request, 'bingo/home.html')
 
 
 
-def verificar_estado_cartela(cartela, numeros_sorteados, min_numeros):
-        linhas_completas = any(all(numero in numeros_sorteados for numero in linha) for linha in cartela.numeros_gerados.values())
-        linhas_min_numeros = any(sum(numero in numeros_sorteados for numero in linha) >= 4 for linha in cartela.numeros_gerados.values())
-        cartela_completa = all(numero in numeros_sorteados for linha in cartela.numeros_gerados.values() for numero in linha)
-        print(linhas_completas)
-        print(linhas_min_numeros)
-        print(cartela_completa)
-        return linhas_completas, linhas_min_numeros, cartela_completa
+def verificar_estado_cartela(cartelas, numeros_sorteados, min_numeros):
+    #print(cartelas.numeros_gerados)
+    print(numeros_sorteados)
+    cartela_kuadra = None
+    cartela_kina = None
+    cartela_keno = None
+    
+    for sorteio, numero_sorteado in enumerate(numeros_sorteados, start=1):
+        for cartela_index, cartela in enumerate(cartelas):
+            cartela_numeros = cartela.numeros_gerados  # Obtenha diretamente a lista de números gerados da cartela
+            linhas_completas = [all(numero in numeros_sorteados[:sorteio] for numero in linha) for linha in cartela_numeros]
+            linhas_min_numeros = [sum(numero in numeros_sorteados[:sorteio] for numero in linha) >= min_numeros for linha in cartela_numeros]
+            print(cartela)
+            if cartela_kuadra is None and any(linhas_min_numeros):
+                cartela_kuadra = (cartela_index, sorteio)
+            
+            if cartela_kina is None and any(linhas_completas):
+                cartela_kina = (cartela_index, sorteio)
+            
+            if cartela_keno is None and all(linhas_completas) and any(linhas_min_numeros):
+                cartela_keno = (cartela_index, sorteio)
+                
+            if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
+                break
+        if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
+            break
+    
+    return cartela_kuadra, cartela_kina, cartela_keno
 
 
 
