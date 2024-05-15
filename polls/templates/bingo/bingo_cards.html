@@ -17,10 +17,64 @@
         .destaque {
             background-color: yellow; /* Defina aqui o estilo de destaque desejado */
         }
+        .modal {
+            display: none; /* Inicialmente oculto */
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        /* Botão de fechar do modal */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h1>Cartelas de Bingo</h1>
+    <p>{{ cartela_kuadra }}</p>
+    <p>{{ cartela_kina }}</p>
+    <p>{{ cartela_keno }}</p>
+    <p>{{ cartela_keno.sorteio }}</p>
+    {% if sorteio_kuadra %}
+    <p>Sorteio da Kuadra: {{ sorteio_kuadra }}</p>
+    {% endif %}
+
+    {% if sorteio_kina %}
+        <p>Sorteio da Kina: {{ sorteio_kina }}</p>
+    {% endif %}
+
+    {% if sorteio_keno %}
+        <p>Sorteio do Keno: {{ sorteio_keno }}</p>
+    {% endif %}
+
+    <ul id="index"></ul>
+
     {% for cartela in cartelas %}
         <h2>Cartela {{ cartela.pk }}</h2>
         <table class="numeros-cartela"> <!-- Adiciona a classe numeros-cartela à tabela -->
@@ -37,47 +91,19 @@
                 {% endfor %}
             </tr>
         </table>
-        <p>{{ cartela_kuadra }}</p>
-        <p>{{ cartela_kina }}</p>
-        <p>{{ cartela_keno }}</p>
     {% endfor %}
     <h2 id="numeros-sorteados">Números Sorteados</h2>
     <ul id="lista-numeros-sorteados"></ul>
 
+    <!-- Modal -->
+    <div id="myModal" class="modal">
+        <!-- Conteúdo do modal -->
+        <div class="modal-content">
+            <p id="modal-text"></p>
+        </div>
+    </div>
+
     <script>
-        {% comment %} function enviarNumeroSorteado(numerosSorteados) {
-            var formData = new FormData();
-            formData.append('numeros_sorteados[]', numerosSorteados);  // Certifique-se de que o nome do parâmetro corresponda ao usado na view
-        
-            fetch('/salvar_numeros_sorteados/', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao salvar número sorteado');
-                }
-            })
-            .catch(error => console.error(error));
-        }
-        
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        } {% endcomment %}
     
         function verificarNumerosSorteados(numerosSorteados) {
             var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
@@ -102,22 +128,55 @@
             }, intervalo);
         }
 
-        function atualizarNumeros(numeros) {
+        function atualizarNumeros(numeros, sorteioKuadra, sorteioKina, sorteioKeno) {
             var ul = document.getElementById('lista-numeros-sorteados');
             ul.innerHTML = ''; // Limpa a lista antes de adicionar os novos números
     
             numeros.forEach(function (numero, index) {
                 setTimeout(function () {
                     var li = document.createElement('li');
-                    li.textContent = numero;
+                    var indexx = index + 1;
+                    li.textContent = 'Índice: ' + indexx + ' - Número: ' + numero;
                     ul.appendChild(li);
                     verificarNumerosSorteados([numero]);
+                    
+                    // Verifica se o índice do número sorteado corresponde ao sorteio da Kuadra
+                    if (indexx === sorteioKuadra) {
+                        openModal('kuadra');
+                    } else if (indexx === sorteioKina){
+                        openModal('kina')
+                    } else if (indexx === sorteioKeno){
+                        openModal('keno')
+                    }
                 }, index * 1000);
             });
         }
+            // Função para abrir o modal
+            function openModal(text) {
+                var modal = document.getElementById("myModal");
+                var modalText = document.getElementById("modal-text");
+    
+                // Define o conteúdo do modal com base no tipo de sorteio
+                if (text === 'kuadra') {
+                    modalText.innerHTML = "{{ cartela_kuadra }}";
+                } else if (text === 'kina') {
+                    modalText.innerHTML = "{{ cartela_kina }}";
+                } else if (text === 'keno') {
+                    modalText.innerHTML = "{{ cartela_keno }}";
+                } else {
+                    modalText.innerHTML = "Sorteio!";
+                }
+    
+                modal.style.display = "block"; // Exibe o modal
+    
+                // Fecha o modal após 5 segundos
+                setTimeout(function(){
+                    modal.style.display = "none";
+                }, 5000);
+            }
     
         //var csrftoken = getCookie('csrftoken');
-        atualizarNumeros({{ numeros_sorteados }});
+        atualizarNumeros({{ numeros_sorteados }}, {{ sorteio_kuadra }}, {{ sorteio_kina}}, {{sorteio_keno}});
     </script>
 
 </body>

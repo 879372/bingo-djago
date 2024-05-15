@@ -26,6 +26,7 @@ class JogoView(View):
         numeros_sorteado = NumeroSorteado.objects.filter(jogo=jogo)
         return render(request, 'bingo/jogo.html', {'jogo': jogo, 'cartelas': cartelas, 'numeros_sorteado': numeros_sorteado})
 
+import json
 
 @login_required
 def bingo_cards(request):
@@ -34,7 +35,9 @@ def bingo_cards(request):
         jogador = request.user
         numeros_sorteados, _ = sortear_numeros()  # Não precisamos dos números disponíveis aqui
         
+        # Criar um sorteio
         sorteio = NumeroSorteado.objects.create(numeros=numeros_sorteados)
+        
         cartelas = []
 
         for _ in range(quantidade_cartelas):
@@ -46,59 +49,65 @@ def bingo_cards(request):
         for cartela in cartelas:
             cartela_json = cartela.numeros_gerados
             cartela_dict = json.loads(cartela_json)
-            lista_col1 = cartela_dict['lin1']
-            lista_col2 = cartela_dict['lin2']
-            lista_col3 = cartela_dict['lin3']
-            todas_listas = [lista_col1, lista_col2, lista_col3]
-            numeros_sem_travessoes = []
-
-            for lista in todas_listas:
-                numeros_sem_travessoes.extend([numero for numero in lista if isinstance(numero, int)])
+            listas_cartela = [cartela_dict['lin1'], cartela_dict['lin2'], cartela_dict['lin3']]
+            numeros_sem_travessoes = [numero for lista in listas_cartela for numero in lista if isinstance(numero, int)]
             cartela.numeros_gerados = numeros_sem_travessoes
-            cartela.numeros_gerados = str(cartela.numeros_gerados)[1:-1]
-            cartela.numeros_gerados = cartela.numeros_gerados.split(',')
 
-        # Verificar o estado das cartelas
-        cartela_kuadra, cartela_kina, cartela_keno = verificar_estado_cartela(cartelas, numeros_sorteados, min_numeros=4)
+        cartela_kuadra = None
+        cartela_kina = None
+        cartela_keno = None
+        sorteio_kuadra = None
+        sorteio_kina = None
+        sorteio_keno = None
+
+        for sorteio_index, numero_sorteado in enumerate(numeros_sorteados, start=1):
+            for cartela_index, cartela in enumerate(cartelas):
+                # Convertendo a lista plana de números de volta em linhas
+                cartela_numeros = [cartela.numeros_gerados[i:i + 5] for i in range(0, len(cartela.numeros_gerados), 5)]
+                
+                # Verificar se alguma linha tem todos os números preenchidos
+                linhas_completas = [all(numero in numeros_sorteados[:sorteio_index] for numero in linha) for linha in cartela_numeros]
+                
+                # Verificar se alguma linha tem pelo menos min_numeros preenchidos
+                linhas_min_numeros = [sum(numero in numeros_sorteados[:sorteio_index] for numero in linha) >= 4 for linha in cartela_numeros]
+
+                if cartela_kuadra is None and any(linhas_min_numeros):
+                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    sorteio_kuadra = sorteio_index   # Adicionar +1 para exibir cartela com base 1
+
+                if cartela_kina is None and any(linhas_completas):
+                    cartela_kina = json.dumps({'tipo': 'kina', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    sorteio_kina = sorteio_index  # Adicionar +1 para exibir cartela com base 1
+
+                if cartela_keno is None and all(linhas_completas) and any(linhas_min_numeros):
+                    cartela_keno = json.dumps({'tipo': 'keno', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    sorteio_keno = sorteio_index  # Adicionar +1 para exibir cartela com base 1
+                    
+                # Criar um sorteio com ou sem cartelas
+                sorteio.cartela_kuadra = cartela_kuadra
+                sorteio.cartela_kina = cartela_kina
+                sorteio.cartela_keno = cartela_keno
+
+                sorteio.save()
+
+                if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
+                    break
+            if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
+                break
         
-        return render(request, 'bingo/bingo_cards.html', {'cartelas': cartelas, 
-                                                           'numeros_sorteados': numeros_sorteados,
-                                                           'cartela_kuadra': cartela_kuadra,
-                                                           'cartela_kina': cartela_kina,
-                                                           'cartela_keno': cartela_keno})
+        return render(request, 'bingo/bingo_cards.html', {
+            'cartelas': cartelas, 
+            'numeros_sorteados': numeros_sorteados,
+            'cartela_kuadra': cartela_kuadra,
+            'cartela_kina': cartela_kina,
+            'cartela_keno': cartela_keno,
+            'sorteio_kuadra': sorteio_kuadra,
+            'sorteio_kina': sorteio_kina,
+            'sorteio_keno': sorteio_keno,
+        })
     else:
         return render(request, 'bingo/home.html')
 
-
-
-def verificar_estado_cartela(cartelas, numeros_sorteados, min_numeros):
-    #print(cartelas.numeros_gerados)
-    print(numeros_sorteados)
-    cartela_kuadra = None
-    cartela_kina = None
-    cartela_keno = None
-    
-    for sorteio, numero_sorteado in enumerate(numeros_sorteados, start=1):
-        for cartela_index, cartela in enumerate(cartelas):
-            cartela_numeros = cartela.numeros_gerados  # Obtenha diretamente a lista de números gerados da cartela
-            linhas_completas = [all(numero in numeros_sorteados[:sorteio] for numero in linha) for linha in cartela_numeros]
-            linhas_min_numeros = [sum(numero in numeros_sorteados[:sorteio] for numero in linha) >= min_numeros for linha in cartela_numeros]
-            print(cartela)
-            if cartela_kuadra is None and any(linhas_min_numeros):
-                cartela_kuadra = (cartela_index, sorteio)
-            
-            if cartela_kina is None and any(linhas_completas):
-                cartela_kina = (cartela_index, sorteio)
-            
-            if cartela_keno is None and all(linhas_completas) and any(linhas_min_numeros):
-                cartela_keno = (cartela_index, sorteio)
-                
-            if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
-                break
-        if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
-            break
-    
-    return cartela_kuadra, cartela_kina, cartela_keno
 
 
 

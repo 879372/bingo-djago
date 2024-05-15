@@ -15,6 +15,9 @@ class Cartela(models.Model):
 class NumeroSorteado(models.Model):
     data_hora_sorteio = models.DateTimeField(auto_now_add=True)
     numeros = models.JSONField(default=list)
+    cartela_kuadra = models.JSONField(null=True, blank=True)
+    cartela_kina = models.JSONField(null=True, blank=True)
+    cartela_keno = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"Sorteio {self.pk} - {self.data_hora_sorteio}"
