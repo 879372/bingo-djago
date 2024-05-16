@@ -60,7 +60,7 @@
     <p>{{ cartela_kuadra }}</p>
     <p>{{ cartela_kina }}</p>
     <p>{{ cartela_keno }}</p>
-    <p>{{ cartela_keno.sorteio }}</p>
+
     {% if sorteio_kuadra %}
     <p>Sorteio da Kuadra: {{ sorteio_kuadra }}</p>
     {% endif %}
@@ -104,80 +104,124 @@
     </div>
 
     <script>
-    
+        var paused = false;
+        var timeoutId = null;
+        var currentIndex = 0;
+        var numerosGlobais = [];
+        var sorteioKuadra, sorteioKina, sorteioKeno;
+
         function verificarNumerosSorteados(numerosSorteados) {
             var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
-            var intervalo = 1000; // Intervalo de 1 segundo
     
-            var i = 0;
-            var interval = setInterval(function () {
-                if (i >= numerosSorteados.length) {
-                    clearInterval(interval); // Interrompe o intervalo quando todos os números foram verificados
-                    return;
+            var numeroAtual = numerosSorteados[0];
+            for (var j = 0; j < numerosCartelas.length; j++) {
+                var numeroCartela = parseInt(numerosCartelas[j].innerText);
+                if (numeroCartela === numeroAtual) {
+                    numerosCartelas[j].classList.add('destaque');
                 }
-    
-                var numeroAtual = numerosSorteados[i];
-                for (var j = 0; j < numerosCartelas.length; j++) {
-                    var numeroCartela = parseInt(numerosCartelas[j].innerText);
-                    if (numeroCartela === numeroAtual) {
-                        numerosCartelas[j].classList.add('destaque');
-                    }
-                }
-                //enviarNumeroSorteado(numeroAtual);
-                i++;
-            }, intervalo);
+            }
         }
 
-        function atualizarNumeros(numeros, sorteioKuadra, sorteioKina, sorteioKeno) {
-            var ul = document.getElementById('lista-numeros-sorteados');
-            ul.innerHTML = ''; // Limpa a lista antes de adicionar os novos números
-    
-            numeros.forEach(function (numero, index) {
-                setTimeout(function () {
-                    var li = document.createElement('li');
-                    var indexx = index + 1;
-                    li.textContent = 'Índice: ' + indexx + ' - Número: ' + numero;
-                    ul.appendChild(li);
-                    verificarNumerosSorteados([numero]);
-                    
-                    // Verifica se o índice do número sorteado corresponde ao sorteio da Kuadra
-                    if (indexx === sorteioKuadra) {
-                        openModal('kuadra');
-                    } else if (indexx === sorteioKina){
-                        openModal('kina')
-                    } else if (indexx === sorteioKeno){
-                        openModal('keno')
-                    }
-                }, index * 1000);
-            });
+        function atualizarNumeros(numeros, kuadra, kina, keno) {
+            numerosGlobais = numeros;
+            sorteioKuadra = kuadra;
+            sorteioKina = kina;
+            sorteioKeno = keno;
+            currentIndex = 0;
+            processarProximoNumero();
         }
-            // Função para abrir o modal
-            function openModal(text) {
-                var modal = document.getElementById("myModal");
-                var modalText = document.getElementById("modal-text");
-    
-                // Define o conteúdo do modal com base no tipo de sorteio
-                if (text === 'kuadra') {
-                    modalText.innerHTML = "{{ cartela_kuadra }}";
-                } else if (text === 'kina') {
-                    modalText.innerHTML = "{{ cartela_kina }}";
-                } else if (text === 'keno') {
-                    modalText.innerHTML = "{{ cartela_keno }}";
-                } else {
-                    modalText.innerHTML = "Sorteio!";
-                }
-    
-                modal.style.display = "block"; // Exibe o modal
-    
-                // Fecha o modal após 5 segundos
-                setTimeout(function(){
-                    modal.style.display = "none";
-                }, 5000);
+
+        function processarProximoNumero() {
+            if (currentIndex >= numerosGlobais.length) {
+                return; // Termina quando todos os números foram processados
             }
-    
-        //var csrftoken = getCookie('csrftoken');
-        atualizarNumeros({{ numeros_sorteados }}, {{ sorteio_kuadra }}, {{ sorteio_kina}}, {{sorteio_keno}});
+
+            if (paused) {
+                return; // Pausa a execução se necessário
+            }
+
+            var ul = document.getElementById('lista-numeros-sorteados');
+            var numero = numerosGlobais[currentIndex];
+            var li = document.createElement('li');
+            li.textContent = 'Índice: ' + (currentIndex + 1) + ' - Número: ' + numero;
+            ul.appendChild(li);
+            verificarNumerosSorteados([numero]);
+            
+            // Verifica se o índice do número sorteado corresponde ao sorteio da Kuadra
+            if (currentIndex + 1 === sorteioKuadra) {
+                openModal('kuadra');
+            } else if (currentIndex + 1 === sorteioKina){
+                openModal('kina')
+            } else if (currentIndex + 1 === sorteioKeno){
+                openModal('keno')
+            }
+
+            currentIndex++;
+            timeoutId = setTimeout(processarProximoNumero, 1000);
+        }
+
+        function openModal(text) {
+            paused = true;
+            clearTimeout(timeoutId);
+
+            var modal = document.getElementById("myModal");
+            var modalText = document.getElementById("modal-text");
+
+            if (text === 'kuadra') {
+                modalText.innerHTML = "{{ cartela_kuadra }}";
+            } else if (text === 'kina') {
+                modalText.innerHTML = "{{ cartela_kina }}";
+            } else if (text === 'keno') {
+                modalText.innerHTML = "{{ cartela_keno }}";
+                // Após informar o sorteio do Keno, exibe o ranking de vencedores
+                setTimeout(exibirRanking, 5000);
+            } else {
+                modalText.innerHTML = "Sorteio!";
+            }
+
+            modal.style.display = "block";
+
+            if (text !== 'keno') {
+                setTimeout(closeModal, 5000);
+            }
+        }
+
+        // Exibe o ranking de vencedores de Kuadra, Kina e Keno
+        function exibirRanking() {
+            // Exibir o ranking no modal
+            var modalText = document.getElementById("modal-text");
+            modalText.innerHTML = "Ranking de Vencedores:<br>Kuadra: " + "{{ cartela_kuadra }}" + "<br>Kina: " + "{{ cartela_kina }}" + "<br>Keno: " + "{{ cartela_keno }}";
+        }
+
+        // Função para calcular o vencedor de uma categoria (Kuadra, Kina, Keno)
+        function calcularVencedor(numeroSorteado, categoria) {
+            var vencedor = 'Nenhum';
+            var numerosCartelas = document.querySelectorAll('.numeros-cartela td');
+
+            for (var j = 0; j < numerosCartelas.length; j++) {
+                var numeroCartela = parseInt(numerosCartelas[j].innerText);
+                if (numeroCartela === numeroSorteado) {
+                    // Aqui você pode implementar a lógica para determinar o vencedor com base na categoria
+                    vencedor = 'Jogador ' + (j + 1); // Apenas um exemplo básico
+                    break;
+                }
+            }
+
+            return vencedor;
+        }
+
+        // Função para fechar o modal e continuar o sorteio
+        function closeModal() {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "none";
+            paused = false;
+            processarProximoNumero();
+        }
+
+        // Inicia o sorteio dos números
+        atualizarNumeros({{ numeros_sorteados }}, {{ sorteio_kuadra }}, {{ sorteio_kina }}, {{ sorteio_keno }});
     </script>
 
 </body>
 </html>
+

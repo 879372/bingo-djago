@@ -26,8 +26,6 @@ class JogoView(View):
         numeros_sorteado = NumeroSorteado.objects.filter(jogo=jogo)
         return render(request, 'bingo/jogo.html', {'jogo': jogo, 'cartelas': cartelas, 'numeros_sorteado': numeros_sorteado})
 
-import json
-
 @login_required
 def bingo_cards(request):
     if request.method == 'POST':
@@ -72,15 +70,15 @@ def bingo_cards(request):
                 linhas_min_numeros = [sum(numero in numeros_sorteados[:sorteio_index] for numero in linha) >= 4 for linha in cartela_numeros]
 
                 if cartela_kuadra is None and any(linhas_min_numeros):
-                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'id': cartela.jogador_id , 'usuario': cartela.jogador.username , 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
                     sorteio_kuadra = sorteio_index   # Adicionar +1 para exibir cartela com base 1
 
                 if cartela_kina is None and any(linhas_completas):
-                    cartela_kina = json.dumps({'tipo': 'kina', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    cartela_kina = json.dumps({'tipo': 'kina', 'id': cartela.jogador_id, 'usuario': cartela.jogador.username, 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
                     sorteio_kina = sorteio_index  # Adicionar +1 para exibir cartela com base 1
 
                 if cartela_keno is None and all(linhas_completas) and any(linhas_min_numeros):
-                    cartela_keno = json.dumps({'tipo': 'keno', 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
+                    cartela_keno = json.dumps({'tipo': 'keno', 'id': cartela.jogador_id, 'usuario': cartela.jogador.username, 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
                     sorteio_keno = sorteio_index  # Adicionar +1 para exibir cartela com base 1
                     
                 # Criar um sorteio com ou sem cartelas
@@ -107,8 +105,6 @@ def bingo_cards(request):
         })
     else:
         return render(request, 'bingo/home.html')
-
-
 
 
 def salvar_numeros_sorteados(request):
