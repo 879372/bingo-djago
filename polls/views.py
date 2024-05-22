@@ -59,6 +59,10 @@ def bingo_cards(request):
         sorteio_keno = None
 
         for sorteio_index, numero_sorteado in enumerate(numeros_sorteados, start=1):
+            vencedores_kuadra = []
+            vencedores_kina = []
+            vencedores_keno = []
+
             for cartela_index, cartela in enumerate(cartelas):
                 # Convertendo a lista plana de números de volta em linhas
                 cartela_numeros = [cartela.numeros_gerados[i:i + 5] for i in range(0, len(cartela.numeros_gerados), 5)]
@@ -69,27 +73,50 @@ def bingo_cards(request):
                 # Verificar se alguma linha tem pelo menos min_numeros preenchidos
                 linhas_min_numeros = [sum(numero in numeros_sorteados[:sorteio_index] for numero in linha) >= 4 for linha in cartela_numeros]
 
-                if cartela_kuadra is None and any(linhas_min_numeros):
-                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'id': cartela.jogador_id , 'usuario': cartela.jogador.username , 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
-                    sorteio_kuadra = sorteio_index   # Adicionar +1 para exibir cartela com base 1
+                if any(linhas_completas):
+                    vencedores_kina.append(cartela)
 
-                if cartela_kina is None and any(linhas_completas):
-                    cartela_kina = json.dumps({'tipo': 'kina', 'id': cartela.jogador_id, 'usuario': cartela.jogador.username, 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
-                    sorteio_kina = sorteio_index  # Adicionar +1 para exibir cartela com base 1
+                if any(linhas_min_numeros):
+                    vencedores_kuadra.append(cartela)
 
-                if cartela_keno is None and all(linhas_completas) and any(linhas_min_numeros):
-                    cartela_keno = json.dumps({'tipo': 'keno', 'id': cartela.jogador_id, 'usuario': cartela.jogador.username, 'cartela': cartela.pk, 'chamada': sorteio_index, 'numeros': cartela.numeros_gerados})
-                    sorteio_keno = sorteio_index  # Adicionar +1 para exibir cartela com base 1
-                    
-                # Criar um sorteio com ou sem cartelas
-                sorteio.cartela_kuadra = cartela_kuadra
-                sorteio.cartela_kina = cartela_kina
-                sorteio.cartela_keno = cartela_keno
+                if all(linhas_completas) and any(linhas_min_numeros):
+                    vencedores_keno.append(cartela)
 
-                sorteio.save()
+            # Se houver vencedores, verificar se há empate
+            if vencedores_kuadra and cartela_kuadra is None:
+                if len(vencedores_kuadra) > 1:
+                    print("Houve um empate na Kuadra nas cartelas:", [cartela.pk for cartela in vencedores_kuadra])
+                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'id': [c.pk for c in vencedores_kuadra], 'usuario': [c.jogador.username for c in vencedores_kuadra], 'chamada': sorteio_index, 'numeros': [c.numeros_gerados for c in vencedores_kuadra]})
+                else:
+                    print(f"A cartela {vencedores_kuadra[0].pk} venceu a Kuadra!")
+                    cartela_kuadra = json.dumps({'tipo': 'kuadra', 'id': vencedores_kuadra[0].jogador_id , 'usuario': vencedores_kuadra[0].jogador.username , 'cartela': vencedores_kuadra[0].pk, 'chamada': sorteio_index, 'numeros': vencedores_kuadra[0].numeros_gerados})
+                sorteio_kuadra = sorteio_index
 
-                if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
-                    break
+            if vencedores_kina and cartela_kina is None:
+                if len(vencedores_kina) > 1:
+                    print("Houve um empate na Kina nas cartelas:", [cartela.pk for cartela in vencedores_kina])
+                    cartela_kina = json.dumps({'tipo': 'kina', 'id': [c.pk for c in vencedores_kina], 'usuario': [c.jogador.username for c in vencedores_kina], 'chamada': sorteio_index, 'numeros': [c.numeros_gerados for c in vencedores_kina]})
+                else:
+                    print(f"A cartela {vencedores_kina[0].pk} venceu a Kina!")
+                    cartela_kina = json.dumps({'tipo': 'kina', 'id': vencedores_kina[0].jogador_id, 'usuario': vencedores_kina[0].jogador.username, 'cartela': vencedores_kina[0].pk, 'chamada': sorteio_index, 'numeros': vencedores_kina[0].numeros_gerados})
+                sorteio_kina = sorteio_index
+
+            if vencedores_keno and cartela_keno is None:
+                if len(vencedores_keno) > 1:
+                    print("Houve um empate no Keno nas cartelas:", [cartela.pk for cartela in vencedores_keno])
+                    cartela_keno = json.dumps({'tipo': 'keno', 'id': [c.pk for c in vencedores_keno], 'usuario': [c.jogador.username for c in vencedores_keno], 'chamada': sorteio_index, 'numeros': [c.numeros_gerados for c in vencedores_keno]})
+                else:
+                    print(f"A cartela {vencedores_keno[0].pk} venceu o Keno!")
+                    cartela_keno = json.dumps({'tipo': 'keno', 'id': vencedores_keno[0].jogador_id, 'usuario': vencedores_keno[0].jogador.username, 'cartela': vencedores_keno[0].pk, 'chamada': sorteio_index, 'numeros': vencedores_keno[0].numeros_gerados})
+                sorteio_keno = sorteio_index
+
+            # Criar um sorteio com ou sem cartelas
+            sorteio.cartela_kuadra = cartela_kuadra
+            sorteio.cartela_kina = cartela_kina
+            sorteio.cartela_keno = cartela_keno
+
+            sorteio.save()
+
             if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
                 break
         
@@ -107,6 +134,7 @@ def bingo_cards(request):
         return render(request, 'bingo/home.html')
 
 
+
 def salvar_numeros_sorteados(request):
     ultimo_sorteio = NumeroSorteado.objects.latest('id')
     cartelas_do_sorteio = Cartela.objects.filter(id_sorteio_id=ultimo_sorteio.id)
@@ -119,7 +147,6 @@ def salvar_numeros_sorteados(request):
     print(sorteio.numeros)
 
     return render(request, 'bingo/bingo_cards.html', {'message': 'Nenhum jogador teve todos os números da cartela sorteados.'})
-
 
 
 def sorteio(request):
