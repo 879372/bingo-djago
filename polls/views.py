@@ -14,7 +14,6 @@ import re
 from django.core.exceptions import ObjectDoesNotExist
 
 
-
 class HomeView(View):
     def get(self, request):
         return render(request, 'bingo/home.html')
@@ -116,7 +115,7 @@ def bingo_cards(request):
             sorteio.cartela_keno = cartela_keno
 
             sorteio.save()
-
+            print()
             if cartela_kuadra is not None and cartela_kina is not None and cartela_keno is not None:
                 break
         
